@@ -8,27 +8,64 @@
 
 #define BUF_SIZE 4
 
+int count = 0, in = 0, out = 0;
 int buffer[BUF_SIZE];
+
+pthread_mutex_t buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
+sem_t buffer_sem;
 
 void pushing(int val)
 {
-    /* TO DO */
-
-    /* NOTE: pay attention to where to put the call to printf to be
-       sure it can be helpful for debugging */
+    /* Mutex */
+    
+		pthread_mutex_lock(&buffer_mutex);
+    // NOTE: pay attention to where to put the call to printf to be
+    //   sure it can be helpful for debugging
+    while (count == BUF_SIZE) {
+    		pthread_mutex_unlock(&buffer_mutex);
+    		printf("pushing value %d\n",val);
+    		pthread_mutex_lock(&buffer_mutex);
+    }
+		count++;
+    buffer[count] = val;
     printf("pushing value %d\n",val);
+    pthread_mutex_unlock(&buffer_mutex);
+    
+    
+    /* Semaphore */
+    /*
+    sem_wait(&buffer_sem);
+    count = (count + 1) % BUF_SIZE; // avoid using "while" which would cause busy waiting.
+    buffer[count] = val;
+    printf("pushing value %d\n",val);
+    sem_post(&buffer_sem);
+    */
 }
 
 int fetching(void)
 {
     int val=0;
 
-    /* TO DO */
-
-    /* NOTE: pay attention to where to put the call to printf to be
-       sure it can be helpful for debugging */
+    /* Mutex */
+    
+		pthread_mutex_lock(&buffer_mutex);
+    val = buffer[count];
+    // count = (count - 1) % BUF_SIZE; // mod a negative number won't work
+    // NOTE: pay attention to where to put the call to printf to be
+    //   sure it can be helpful for debugging 
     printf("\t feched value %d\n",val);
-
+    pthread_mutex_unlock(&buffer_mutex);
+    
+    
+    /* Semaphore */
+    /*
+    sem_wait(&buffer_sem);
+    val = buffer[count];
+    count = (count - 1) % BUF_SIZE;
+    printf("\t feched value %d\n",val);
+    sem_post(&buffer_sem);
+    */
+    
     return val;
 }
 
@@ -53,6 +90,7 @@ void* thread_using(void* arg)
     
     for(i=0; i<LOOPS; i++){
         value = fetching();
+        //printf("Get the value: %d\n", value);
     }
 
     return NULL;
@@ -69,6 +107,8 @@ int main(void)
     clock_gettime(CLOCK_MONOTONIC, &tt);
     /* seed for the random number generator */
     srand(tt.tv_sec);
+    
+    sem_init(&buffer_sem, 0, 1);
     
     if(pthread_create (&tids[0], NULL, thread_using, NULL) != 0){
         fprintf(stderr,"Failed to create the using thread\n");

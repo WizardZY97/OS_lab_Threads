@@ -1,9 +1,15 @@
 CC=gcc
-CFLAGS=-Wall -Werror
+CFLAGS=-Wall #-Werror -g
 SOURCES=$(wildcard *.c)
 OBJ=$(patsubst %.c, %.o, $(SOURCES))
 
-all: peru_and_bolivia clean
+all: passing_objects barrier peru_and_bolivia clean
+
+passing_objects: passing_objects.o
+	$(CC) $(CFLAGS) -o $@ $< 
+
+barrier: barrier.o
+	$(CC) $(CFLAGS) -o $@ $< 
 
 peru_and_bolivia: peru_and_bolivia.o
 	$(CC) $(CFLAGS) -o $@ $< 
