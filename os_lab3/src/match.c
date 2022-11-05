@@ -34,6 +34,7 @@ int main (int argc, char **argv){
   }
 
   team1 = atoi (argv[1]) ;
+  //printf("team1: %d\n", team1);
   team2  = atoi (argv[2]) ;
   nb_threads = team1 + team2; 
   tids = malloc (nb_threads*sizeof(pthread_t)) ;
@@ -51,7 +52,7 @@ int main (int argc, char **argv){
   for (i = 0; i < nb_threads; i++){
     pthread_join (tids[i], NULL) ;
   }
-  
+
   free (tids) ;
   return EXIT_SUCCESS;
 }
