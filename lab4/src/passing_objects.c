@@ -12,59 +12,69 @@ int count = 0, in = 0, out = 0;
 int buffer[BUF_SIZE];
 
 pthread_mutex_t buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
-sem_t buffer_sem;
+sem_t lock_sem, full_sem, empty_sem;
 
 void pushing(int val)
 {
-    /* Mutex */
-    
+    /* Mutex (Busy waiting) */
+    /*
 		pthread_mutex_lock(&buffer_mutex);
     // NOTE: pay attention to where to put the call to printf to be
     //   sure it can be helpful for debugging
     while (count == BUF_SIZE) {
-    		pthread_mutex_unlock(&buffer_mutex);
-    		printf("pushing value %d\n",val);
-    		pthread_mutex_lock(&buffer_mutex);
+			// Busy waiting...
+    	pthread_mutex_unlock(&buffer_mutex);
+    	printf("pushing value %d...\n",val);
+    	pthread_mutex_lock(&buffer_mutex);
     }
 		count++;
-    buffer[count] = val;
-    printf("pushing value %d\n",val);
+    buffer[in] = val;
+    in = (in + 1) % BUF_SIZE;
+    printf("pushed value %d\n",val);
     pthread_mutex_unlock(&buffer_mutex);
-    
+    */
     
     /* Semaphore */
-    /*
-    sem_wait(&buffer_sem);
-    count = (count + 1) % BUF_SIZE; // avoid using "while" which would cause busy waiting.
-    buffer[count] = val;
-    printf("pushing value %d\n",val);
-    sem_post(&buffer_sem);
-    */
+    sem_wait(&full_sem);
+    sem_wait(&lock_sem);
+    buffer[in] = val;
+    in = (in + 1) % BUF_SIZE;
+    printf("pushed value %d\n",val);
+		sem_post(&lock_sem);
+    sem_post(&empty_sem);
 }
 
 int fetching(void)
 {
     int val=0;
 
-    /* Mutex */
-    
+    /* Mutex (Busy waiting) */
+    /*
 		pthread_mutex_lock(&buffer_mutex);
-    val = buffer[count];
-    // count = (count - 1) % BUF_SIZE; // mod a negative number won't work
     // NOTE: pay attention to where to put the call to printf to be
     //   sure it can be helpful for debugging 
+		while (count == 0) {
+			// Busy waiting...
+			pthread_mutex_unlock(&buffer_mutex);
+    	printf("fectching value...\n");
+    	pthread_mutex_lock(&buffer_mutex);
+		}
+		// count = (count - 1) % BUF_SIZE; // mod a negative number won't work
+		count--;
+    val = buffer[out];
+    out = (out + 1) % BUF_SIZE;
     printf("\t feched value %d\n",val);
     pthread_mutex_unlock(&buffer_mutex);
-    
+    */
     
     /* Semaphore */
-    /*
-    sem_wait(&buffer_sem);
-    val = buffer[count];
-    count = (count - 1) % BUF_SIZE;
+    sem_wait(&empty_sem);
+		sem_wait(&lock_sem);
+    val = buffer[out];
+    out = (out + 1) % BUF_SIZE;
     printf("\t feched value %d\n",val);
-    sem_post(&buffer_sem);
-    */
+		sem_post(&lock_sem);
+    sem_post(&full_sem);
     
     return val;
 }
@@ -108,7 +118,9 @@ int main(void)
     /* seed for the random number generator */
     srand(tt.tv_sec);
     
-    sem_init(&buffer_sem, 0, 1);
+    sem_init(&lock_sem, 0, 1);
+    sem_init(&empty_sem, 0, 0);
+    sem_init(&full_sem, 0, BUF_SIZE);
     
     if(pthread_create (&tids[0], NULL, thread_using, NULL) != 0){
         fprintf(stderr,"Failed to create the using thread\n");
