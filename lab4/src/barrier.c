@@ -5,16 +5,26 @@
 
 #define NB_THREADS 16
 
+int count = 0;
+pthread_cond_t not_all_calls = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 void barrier(void)
 {
-    /* TODO */
+    pthread_mutex_lock(&mutex);
+    count++;
+    while(count < NB_THREADS) {
+    	pthread_cond_wait(&not_all_calls, &mutex);
+    }
+    pthread_cond_signal(&not_all_calls);
+    pthread_mutex_unlock(&mutex);
 }
 
 
 
 void* thread_routine(void* arg)
 {
-    unsigned long id = (unsigned long)arg;
+    unsigned long id = (unsigned long) arg;
 
     printf("thread %lu at the barrier\n", id);
 
@@ -32,7 +42,7 @@ int main(void)
     unsigned long i=0;
 
     for(i=0; i<NB_THREADS; i++){
-        if(pthread_create (&tids[i], NULL, thread_routine, (void*)i) != 0){
+        if(pthread_create (&tids[i], NULL, thread_routine, (void*) i) != 0){
             fprintf(stderr,"Failed to create thread %lu\n", i);
             return EXIT_FAILURE;
         }
